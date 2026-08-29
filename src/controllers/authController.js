@@ -1,7 +1,7 @@
 import { validateSignUpData, validateLoginUser } from "../utils/validate.js";
 import bcrypt from "bcrypt";
 import User from "../models/User.js";
-import jwtSign from "../utils/jwtValidation.js";
+import {jwtSign} from "../utils/jwtValidation.js";
 
 //signup user
 export const signupUser = async (req, res) => {

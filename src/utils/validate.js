@@ -1,7 +1,7 @@
 import validator from "validator";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
-import jwtSign from "./jwtValidation.js";
+import {jwtSign} from "./jwtValidation.js";
 
 export const validateSignUpData = (req) => {
   const { firstName, lastName, emailId, password } = req.body;

@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 
 const jwtSecret = process.env.JWT_SECRET;
 
-const jwtSign = async (user, res) => {
+export const jwtSign = async (user, res) => {
   const userId = user._id;
   const token = await jwt.sign({ userId }, jwtSecret, {
     expiresIn: "7d",
@@ -13,4 +13,15 @@ const jwtSign = async (user, res) => {
   });
 };
 
-export default jwtSign;
+export const jwtVerify = async (req, res) => {
+  const cookies = req.cookies;
+  const { token } = cookies;
+
+  if (!token) {
+    res.status(401).send({ message: "Please Login!" });
+  }
+
+  const decodedToken = await jwt.verify(token, jwtSecret);
+
+  return decodedToken;
+};

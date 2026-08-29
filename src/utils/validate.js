@@ -1,7 +1,9 @@
 import validator from "validator";
+import User from "../models/User.js";
+import bcrypt from "bcrypt";
+import jwtSign from "./jwtValidation.js";
 
-const validateSignUpDate = (req) => {
-  
+export const validateSignUpData = (req) => {
   const { firstName, lastName, emailId, password } = req.body;
 
   if (!firstName?.trim() || !lastName?.trim()) {
@@ -23,4 +25,25 @@ const validateSignUpDate = (req) => {
   return true;
 };
 
-export default validateSignUpDate;
+export const validateLoginUser = async (req, res) => {
+  const { emailId, password } = req.body;
+
+  if (!validator.isEmail(emailId)) {
+    throw new Error("Enter a valid email address");
+  }
+  const user = await User.findOne({ emailId: emailId});
+  if(!user){
+    throw new Error("Invalid Credentials")
+  }
+  const passwordHash = user.password;
+  const inputPassword = password;
+
+  const isValidPassword = await bcrypt.compare(inputPassword, passwordHash);
+  if(isValidPassword){
+    await jwtSign(user, res)
+  }else{
+    throw new Error("Invalid Credentials")
+  }
+
+  return user
+};

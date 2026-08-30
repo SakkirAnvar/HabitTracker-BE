@@ -31,3 +31,14 @@ export const createHabit = async (req, res) => {
 };
 
 //Fetch All Habit
+export const getAllHabits = async (req, res) => {
+  const user = req.user;
+
+  const habits = await Habit.find({ userId: user._id });
+
+  res.status(201).json({
+    status: true,
+    message: "Habit data retrived Successfully",
+    data: habits,
+  });
+};

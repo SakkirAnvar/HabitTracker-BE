@@ -42,3 +42,44 @@ export const getAllHabits = async (req, res) => {
     data: habits,
   });
 };
+
+//get Single Habit
+export const getHabit = async (req, res) => {
+  const user = req.user;
+  const habitId = req.params;
+};
+
+//Update Habit
+export const updateHabit = async (req, res) => {
+  const { habitName, category, type, target, unit, frequency, active } =
+    req.body;
+
+  const habitId  = req.params.id;
+
+  const updatedHabit = await Habit.findByIdAndUpdate(
+    habitId,
+    {
+      habitName,
+      category,
+      type,
+      target,
+      unit,
+      frequency,
+      active,
+    },
+    { returnDocument: "after", runValidators: true },
+  );
+
+  if (!updateHabit) {
+    return res.status(404).json({
+      status: false,
+      message: "Habit not found",
+    });
+  }
+
+  res.status(201).json({
+    status: true,
+    message: "Habit Updated Successfully",
+    data: updatedHabit,
+  });
+};

@@ -18,7 +18,7 @@ export const jwtVerify = async (req, res) => {
   const { token } = cookies;
 
   if (!token) {
-    res.status(401).send({ message: "Please Login!" });
+    return res.status(401).send({ message: "Please Login!" });
   }
 
   const decodedToken = await jwt.verify(token, jwtSecret);

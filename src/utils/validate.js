@@ -1,7 +1,7 @@
 import validator from "validator";
 import User from "../models/User.js";
 import bcrypt from "bcrypt";
-import {jwtSign} from "./jwtValidation.js";
+import { jwtSign } from "./jwtValidation.js";
 
 export const validateSignUpData = (req) => {
   const { firstName, lastName, emailId, password } = req.body;
@@ -31,19 +31,47 @@ export const validateLoginUser = async (req, res) => {
   if (!validator.isEmail(emailId)) {
     throw new Error("Enter a valid email address");
   }
-  const user = await User.findOne({ emailId: emailId});
-  if(!user){
-    throw new Error("Invalid Credentials")
+  const user = await User.findOne({ emailId: emailId });
+  if (!user) {
+    throw new Error("Invalid Credentials");
   }
   const passwordHash = user.password;
   const inputPassword = password;
 
   const isValidPassword = await bcrypt.compare(inputPassword, passwordHash);
-  if(isValidPassword){
-    await jwtSign(user, res)
-  }else{
-    throw new Error("Invalid Credentials")
+  if (isValidPassword) {
+    await jwtSign(user, res);
+  } else {
+    throw new Error("Invalid Credentials");
   }
 
-  return user
+  return user;
+};
+
+export const validateHabitData = (req) => {
+  const { habitName, category, type, target, unit, frequency } = req.body;
+
+  if (!habitName?.trim()) {
+    throw new Error("Habit name is required");
+  }
+
+  if (!category?.trim()) {
+    throw new Error("Category is required");
+  }
+
+  if (!["boolean", "count", "duration"].includes(type)) {
+    throw new Error("Invalid habit type");
+  }
+
+  if (target === undefined || target === null || target <= 0) {
+    throw new Error("Target must be greater than 0");
+  }
+
+  if (!unit?.trim()) {
+    throw new Error("Unit is required");
+  }
+
+  if (!["daily", "weekly", "monthly"].includes(frequency)) {
+    throw new Error("Invalid frequency");
+  }
 };

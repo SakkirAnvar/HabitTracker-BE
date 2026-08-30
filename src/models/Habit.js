@@ -1,32 +1,54 @@
 import mongoose, { Schema } from "mongoose";
 
-const habitSchema = new mongoose.Schema(
+const habitSchema = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
+
     habitName: {
       type: String,
       required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 100,
     },
+
     category: {
       type: String,
       required: true,
+      trim: true,
     },
+
     type: {
       type: String,
+      required: true,
+      enum: ["boolean", "count", "duration"],
     },
+
     target: {
-      type: String,
+      type: Number,
+      required: true,
+      min: 1,
     },
+
     unit: {
       type: String,
+      required: true,
+      trim: true,
     },
+
     frequency: {
       type: String,
+      required: true,
+      enum: ["daily", "weekly", "monthly"],
     },
+
     active: {
-      type: String,
+      type: Boolean,
+      default: true,
     },
   },
   {

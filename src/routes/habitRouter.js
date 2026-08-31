@@ -5,6 +5,7 @@ import {
   deleteHabit,
   getAllHabits,
   getHabit,
+  toggleHabitStatus,
   updateHabit,
 } from "../controllers/habitController.js";
 import { userAuth } from "../middlewares/auth.js";
@@ -15,6 +16,7 @@ router.post("/habits", userAuth, asyncHandler(createHabit));
 router.get("/habits", userAuth, asyncHandler(getAllHabits));
 router.get("/habits/:id", userAuth, asyncHandler(getHabit));
 router.patch("/habits/:id", userAuth, asyncHandler(updateHabit));
+router.patch("/habits/:id/toggle", userAuth, asyncHandler(toggleHabitStatus));
 router.delete("/habits/:id", userAuth, asyncHandler(deleteHabit));
 
 export default router;

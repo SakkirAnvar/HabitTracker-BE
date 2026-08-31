@@ -14,7 +14,6 @@ const habitSchema = new Schema(
       trim: true,
       minlength: 2,
       maxlength: 25,
-      unique: true,
     },
 
     category: {
@@ -56,6 +55,9 @@ const habitSchema = new Schema(
     timestamps: true,
   },
 );
+
+// One habit name per user
+habitSchema.index({ userId: 1, habitName: 1 }, { unique: true });
 
 const Habit = mongoose.model("Habit", habitSchema);
 

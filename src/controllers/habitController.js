@@ -3,16 +3,28 @@ import { validateHabitData } from "../utils/validate.js";
 
 //Create Habit
 export const createHabit = async (req, res) => {
+  validateHabitData(req);
+
   const { habitName, category, type, target, unit, frequency, active } =
     req.body;
 
   const user = req.user;
 
-  validateHabitData(req);
-
-  const habit = await new Habit({
+  const existingHabit = await Habit.findOne({
     userId: user._id,
-    habitName,
+    habitName: habitName.trim(),
+  });
+
+  if (existingHabit) {
+    return res.status(409).json({
+      status: false,
+      message: "Habit already exists",
+    });
+  }
+
+  const habit = new Habit({
+    userId: user._id,
+    habitName: habitName.trim(),
     category,
     type,
     target,
@@ -25,16 +37,22 @@ export const createHabit = async (req, res) => {
 
   res.status(201).json({
     status: true,
-    message: "New Habit Added Successfully ",
+    message: "New Habit Added Successfully",
     data: newHabit,
   });
 };
-
 //Fetch All Habit
 export const getAllHabits = async (req, res) => {
   const user = req.user;
 
   const habits = await Habit.find({ userId: user._id });
+
+  if (habits.length === 0) {
+    res.status(404).json({
+      status: false,
+      message: "No Habits Found",
+    });
+  }
 
   res.status(201).json({
     status: true,
@@ -93,6 +111,35 @@ export const updateHabit = async (req, res) => {
   res.status(201).json({
     status: true,
     message: "Habit Updated Successfully",
+    data: updatedHabit,
+  });
+};
+
+//toggleHabitStatus
+export const toggleHabitStatus = async (req, res) => {
+  const habitId = req.params.id;
+
+  const habit = await Habit.findOne({
+    _id: habitId,
+    userId: req.user._id,
+  });
+
+  if (!habit) {
+    return res.status(404).json({
+      status: false,
+      message: "Habit not found or you are not authorized",
+    });
+  }
+
+  habit.active = !habit.active;
+
+  const updatedHabit = await habit.save();
+
+  res.status(200).json({
+    status: true,
+    message: updatedHabit.active
+      ? "Habit activated successfully"
+      : "Habit deactivated successfully",
     data: updatedHabit,
   });
 };

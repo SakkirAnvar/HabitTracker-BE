@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import { jwtSign } from "./jwtValidation.js";
 
+//Auth Validation
 export const validateSignUpData = (req) => {
   const { firstName, lastName, emailId, password } = req.body;
 
@@ -48,6 +49,7 @@ export const validateLoginUser = async (req, res) => {
   return user;
 };
 
+//Habit Validation
 export const validateHabitData = (req) => {
   const { habitName, category, type, target, unit, frequency } = req.body;
 

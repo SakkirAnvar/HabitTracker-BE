@@ -45,8 +45,21 @@ export const getAllHabits = async (req, res) => {
 
 //get Single Habit
 export const getHabit = async (req, res) => {
-  const user = req.user;
-  const habitId = req.params;
+  const habitId = req.params.id;
+  const habit = await Habit.findOne(habitId);
+
+  if (!habit) {
+    res.status(401).json({
+      status: false,
+      message: "Something went wrong!",
+    });
+  }
+
+  res.status(201).json({
+    status: true,
+    message: "Habit Retrieved Successfully!",
+    data: habit,
+  });
 };
 
 //Update Habit
@@ -54,7 +67,7 @@ export const updateHabit = async (req, res) => {
   const { habitName, category, type, target, unit, frequency, active } =
     req.body;
 
-  const habitId  = req.params.id;
+  const habitId = req.params.id;
 
   const updatedHabit = await Habit.findByIdAndUpdate(
     habitId,
@@ -81,5 +94,28 @@ export const updateHabit = async (req, res) => {
     status: true,
     message: "Habit Updated Successfully",
     data: updatedHabit,
+  });
+};
+
+//delete Habit
+export const deleteHabit = async (req, res) => {
+  const habitId = req.params.id;
+  const user = req.user;
+
+  const habit = await Habit.findOneAndDelete({
+    _id: habitId,
+    userId: user._id,
+  });
+
+  if (!habit) {
+    res.status(404).json({
+      status: false,
+      message: "Habit not found or you are not authorized to delete it",
+    });
+  }
+
+  res.status(201).json({
+    status: true,
+    message: "Habit Deleted Successfully",
   });
 };

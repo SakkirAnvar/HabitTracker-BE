@@ -54,7 +54,7 @@ export const getGoal = async (req, res) => {
   const goal = await Goal.findOne({ _id: goalId, userId: user._id });
 
   if (!goal) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "Goal not found!",
     });
@@ -73,7 +73,7 @@ export const getAllGoal = async (req, res) => {
   const goals = await Goal.find({ userId: user._id });
 
   if (goals.length === 0) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "No Goals found!",
     });
@@ -83,5 +83,79 @@ export const getAllGoal = async (req, res) => {
     status: true,
     message: "Goals Retreived successfully",
     data: goals,
+  });
+};
+
+//updateGoal
+export const updateGoal = async (req, res) => {
+  validateGoal(req.body, true);
+
+  const goal = await Goal.findOne({
+    _id: req.params.id,
+    userId: req.user._id,
+  });
+
+  if (!goal) {
+    return res.status(404).json({
+      status: false,
+      message: "Goal not found!",
+    });
+  }
+
+  const {
+    title,
+    description,
+    target,
+    currentProgress,
+    unit,
+    startDate,
+    deadLine,
+  } = req.body;
+
+  if (title !== undefined) goal.title = title.trim();
+  if (description !== undefined) goal.description = description;
+  if (target !== undefined) goal.target = target;
+  if (currentProgress !== undefined) {
+    goal.currentProgress = currentProgress;
+  }
+  if (unit !== undefined) goal.unit = unit;
+  if (startDate !== undefined) goal.startDate = startDate;
+  if (deadLine !== undefined) goal.deadLine = deadLine;
+
+  if (goal.currentProgress >= goal.target) {
+    goal.status = "completed";
+  } else {
+    goal.status = "active";
+  }
+
+  const updatedGoal = await goal.save();
+
+  res.status(200).json({
+    status: true,
+    message: "Goal updated successfully",
+    data: updatedGoal,
+  });
+};
+
+//deleteGoal
+export const deleteGoal = async (req, res) => {
+  const goalId = req.params.id;
+  const userId = req.user._id;
+
+  const goal = await Goal.findOneAndDelete({
+    _id: goalId,
+    userId,
+  });
+
+  if (!goal) {
+    return res.status(404).json({
+      status: false,
+      message: "Goal not found",
+    });
+  }
+
+  res.status(200).json({
+    status: true,
+    message: "Goal deleted successfully",
   });
 };

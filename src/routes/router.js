@@ -2,11 +2,13 @@ import express from "express";
 import authRouter from "./authRouter.js";
 import habitRouter from "./habitRouter.js";
 import habitLogRouter from "../routes/habitLogRouter.js"
+import goalRouter from "../routes/goalRouter.js"
 
 const router = express.Router();
 
 router.use("/auth", authRouter);
 router.use("/", habitRouter);
 router.use("/", habitLogRouter)
+router.use("/", goalRouter)
 
 export default router;

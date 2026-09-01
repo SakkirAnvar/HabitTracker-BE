@@ -77,3 +77,67 @@ export const validateHabitData = (req) => {
     throw new Error("Invalid frequency");
   }
 };
+
+//Goal validation
+export const validateGoal = (req) => {
+  const {
+    title,
+    description,
+    target,
+    currentProgress,
+    unit,
+    startDate,
+    deadLine,
+  } = req.body;
+
+  if (!title?.trim()) {
+    throw new Error("Goal title is required");
+  }
+
+  if (title.trim().length < 2 || title.trim().length > 100) {
+    throw new Error("Goal title must be between 2 and 100 characters");
+  }
+
+  if (description && description.trim().length > 200) {
+    throw new Error("Description must be below 200 characters");
+  }
+
+  if (
+    target === undefined ||
+    target === null ||
+    typeof target !== "number" ||
+    target <= 0
+  ) {
+    throw new Error("Goal target must be greater than 0");
+  }
+
+  if (
+    currentProgress !== undefined &&
+    (typeof currentProgress !== "number" || currentProgress < 0)
+  ) {
+    throw new Error("Current progress cannot be negative");
+  }
+
+  if (!startDate) {
+    throw new Error("Goal start date is required");
+  }
+
+  if (!deadLine) {
+    throw new Error("Goal deadLine is required");
+  }
+
+  const start = new Date(startDate);
+  const end = new Date(deadLine);
+
+  if (isNaN(start.getTime())) {
+    throw new Error("Invalid start date");
+  }
+
+  if (isNaN(end.getTime())) {
+    throw new Error("Invalid deadline");
+  }
+
+  if (end <= start) {
+    throw new Error("Deadline must be after the start date");
+  }
+};

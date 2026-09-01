@@ -1,6 +1,7 @@
 import Habit from "../models/Habit.js";
 import HabitLog from "../models/HabitLog.js";
 
+//createHabitLog
 export const createHabitLog = async (req, res) => {
   const habitId = req.params.id;
   const { value } = req.body;
@@ -57,5 +58,26 @@ export const createHabitLog = async (req, res) => {
     status: true,
     message: "Daily progress recorded successfully",
     data: habitLog,
+  });
+};
+
+//getAllHabitLog
+export const getAllHabitLog = async (req, res) => {
+  const user = req.user;
+  console.log(user);
+  
+  const habitLogs = await HabitLog.find( {userId: req.user._id} );
+
+  if (habitLogs.length === 0) {
+    res.status(404).json({
+      status: false,
+      message: "Habit Log Not Found",
+    });
+  }
+
+  res.status(201).json({
+    status: true,
+    message: "HabitLog retrieved successfully",
+    data: habitLogs,
   });
 };

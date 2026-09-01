@@ -21,6 +21,9 @@ const habitLogSchema = new Schema(
       required: true,
       min: 0,
     },
+    notes: {
+      type: String,
+    },
     completed: {
       type: Boolean,
       default: false,

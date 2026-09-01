@@ -9,7 +9,6 @@ import {
   updateHabit,
 } from "../controllers/habitController.js";
 import { userAuth } from "../middlewares/auth.js";
-import { createHabitLog } from "../controllers/habitLogController.js";
 
 const router = express.Router();
 
@@ -19,8 +18,5 @@ router.get("/habits/:id", userAuth, asyncHandler(getHabit));
 router.patch("/habits/:id", userAuth, asyncHandler(updateHabit));
 router.patch("/habits/:id/toggle", userAuth, asyncHandler(toggleHabitStatus));
 router.delete("/habits/:id", userAuth, asyncHandler(deleteHabit));
-
-//HabitLog Route
-router.post("/habits/:id/log", userAuth, asyncHandler(createHabitLog));
 
 export default router;

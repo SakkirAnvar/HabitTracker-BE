@@ -176,3 +176,87 @@ export const validateGoal = (data, isUpdate = false) => {
     }
   }
 };
+
+//review validation
+export const validateReview = (req, isUpdate = false) => {
+  const { date, mood, energy, wentWell, improvement, tomorrowPriority, notes } =
+    req.body;
+
+  if (!isUpdate && !date) {
+    throw new Error("Review date is required");
+  }
+
+  if (date !== undefined) {
+    const reviewDate = new Date(date);
+
+    if (isNaN(reviewDate.getTime())) {
+      throw new Error("Invalid review date");
+    }
+  }
+
+  if (energy !== undefined) {
+    if (typeof energy !== "number" || energy < 1 || energy > 10) {
+      throw new Error("Energy must be a number between 1 and 10");
+    }
+  }
+
+  if (wentWell !== undefined) {
+    if (typeof wentWell !== "string") {
+      throw new Error("Went well must be a string");
+    }
+
+    if (!wentWell.trim()) {
+      throw new Error("Went well cannot be empty");
+    }
+
+    if (wentWell.trim().length > 150) {
+      throw new Error("Went well must be below 150 characters");
+    }
+  }
+
+  if (!isUpdate && !improvement?.trim()) {
+    throw new Error("Improvement is required");
+  }
+
+  if (improvement !== undefined) {
+    if (typeof improvement !== "string") {
+      throw new Error("Improvement must be in characters");
+    }
+
+    if (!improvement.trim()) {
+      throw new Error("Improvement cannot be empty");
+    }
+
+    if (improvement.trim().length > 200) {
+      throw new Error("Improvement must be below 200 characters");
+    }
+  }
+
+  if (!isUpdate && !tomorrowPriority?.trim()) {
+    throw new Error("Tomorrow priority is required");
+  }
+
+  if (tomorrowPriority !== undefined) {
+    if (typeof tomorrowPriority !== "string") {
+      throw new Error("Tomorrow priority must be in characters");
+    }
+
+    if (!tomorrowPriority.trim()) {
+      throw new Error("Tomorrow priority cannot be empty");
+    }
+
+    if (tomorrowPriority.trim().length > 200) {
+      throw new Error("Tomorrow priority must be below 200 characters");
+    }
+  }
+
+  if (notes !== undefined) {
+    if (typeof notes !== "string") {
+      throw new Error("Notes must be in characters");
+    }
+
+    if (notes.trim().length > 250) {
+      throw new Error("Notes must be below 250 characters");
+    }
+  }
+};

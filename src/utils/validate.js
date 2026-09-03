@@ -260,3 +260,22 @@ export const validateReview = (req, isUpdate = false) => {
     }
   }
 };
+
+//changePasswordValidation
+export const changePasswordValidation = (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({
+      status: false,
+      message: "Current password and new password are required",
+    });
+  }
+
+  if (!validator.isStrongPassword(newPassword)) {
+    return res.status(400).json({
+      status: false,
+      message: "Enter a strong new password",
+    });
+  }
+};

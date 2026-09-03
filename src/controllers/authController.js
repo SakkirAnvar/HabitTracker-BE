@@ -119,7 +119,7 @@ export const changePassword = async (req, res) => {
   const { _id, password } = req.user;
   const { currentPassword, newPassword } = req.body;
 
-  changePasswordValidation(req, res);
+  changePasswordValidation(req);
 
   const passwordValid = await bcrypt.compare(currentPassword, password);
   if (!passwordValid) {

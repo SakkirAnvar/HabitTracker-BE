@@ -54,6 +54,12 @@ const goalSchema = new Schema(
       enum: ["active", "completed", "cancelled", "expired"],
       default: "active",
     },
+    habitIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Habit",
+      },
+    ],
   },
   {
     timestamps: true,

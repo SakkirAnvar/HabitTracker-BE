@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import Goal from "../models/Goal.js";
 import { validateGoal } from "../utils/validate.js";
+import Habit from "../models/Habit.js";
 
 //createGoal
 export const createGoal = async (req, res) => {
@@ -27,6 +29,9 @@ export const createGoal = async (req, res) => {
     });
   }
 
+  const progress = currentProgress ?? 0;
+  const status = progress >= target ? "completed" : "active";
+
   const goal = new Goal({
     userId: user._id,
     title,
@@ -36,6 +41,8 @@ export const createGoal = async (req, res) => {
     unit,
     startDate,
     deadLine,
+    status,
+    habitIds: [],
   });
 
   const newGoal = await goal.save();
@@ -49,56 +56,81 @@ export const createGoal = async (req, res) => {
 
 //getGoal
 export const getGoal = async (req, res) => {
-  const user = req.user;
+  const userId = req.user._id;
   const goalId = req.params.id;
-  const goal = await Goal.findOne({ _id: goalId, userId: user._id });
+
+  if (!mongoose.isValidObjectId(goalId)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid goal ID",
+    });
+  }
+
+  const goal = await Goal.findOne({
+    _id: goalId,
+    userId,
+  }).populate("habitIds");
 
   if (!goal) {
     return res.status(404).json({
       status: false,
-      message: "Goal not found!",
+      message: "Goal not found",
     });
   }
 
-  res.status(201).json({
+  res.status(200).json({
     status: true,
-    message: "Goal retreived successfully",
+    message: "Goal retrieved successfully",
     data: goal,
   });
 };
 
 //getAllGoal
 export const getAllGoal = async (req, res) => {
-  const user = req.user;
-  const goals = await Goal.find({ userId: user._id });
+  const userId = req.user._id;
 
-  if (goals.length === 0) {
-    return res.status(404).json({
-      status: false,
-      message: "No Goals found!",
-    });
-  }
+  const goals = await Goal.find({
+    userId,
+  })
+    .populate("habitIds")
+    .sort({ createdAt: -1 });
 
-  res.status(201).json({
+  res.status(200).json({
     status: true,
-    message: "Goals Retreived successfully",
+    message: "Goals retrieved successfully",
     data: goals,
   });
 };
 
 //updateGoal
 export const updateGoal = async (req, res) => {
+  const userId = req.user._id;
+  const goalId = req.params.id;
+
+  if (!mongoose.isValidObjectId(goalId)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid goal ID",
+    });
+  }
+
   validateGoal(req.body, true);
 
+  /*
+  |--------------------------------------------------------------------------
+  | Find user's goal
+  |--------------------------------------------------------------------------
+  */
+
   const goal = await Goal.findOne({
-    _id: req.params.id,
-    userId: req.user._id,
+    _id: goalId,
+    userId,
   });
 
   if (!goal) {
     return res.status(404).json({
       status: false,
-      message: "Goal not found!",
+      message: "Goal not found",
     });
   }
 
@@ -109,18 +141,42 @@ export const updateGoal = async (req, res) => {
     currentProgress,
     unit,
     startDate,
-    deadLine,
+    deadline,
   } = req.body;
 
-  if (title !== undefined) goal.title = title.trim();
-  if (description !== undefined) goal.description = description;
-  if (target !== undefined) goal.target = target;
+  /*
+  |--------------------------------------------------------------------------
+  | Update only provided fields
+  |--------------------------------------------------------------------------
+  */
+
+  if (title !== undefined) {
+    goal.title = title.trim();
+  }
+
+  if (description !== undefined) {
+    goal.description = description;
+  }
+
+  if (target !== undefined) {
+    goal.target = target;
+  }
+
   if (currentProgress !== undefined) {
     goal.currentProgress = currentProgress;
   }
-  if (unit !== undefined) goal.unit = unit;
-  if (startDate !== undefined) goal.startDate = startDate;
-  if (deadLine !== undefined) goal.deadLine = deadLine;
+
+  if (unit !== undefined) {
+    goal.unit = unit;
+  }
+
+  if (startDate !== undefined) {
+    goal.startDate = startDate;
+  }
+
+  if (deadline !== undefined) {
+    goal.deadLine = deadline;
+  }
 
   if (goal.currentProgress >= goal.target) {
     goal.status = "completed";
@@ -157,5 +213,122 @@ export const deleteGoal = async (req, res) => {
   res.status(200).json({
     status: true,
     message: "Goal deleted successfully",
+  });
+};
+
+// add habit to goal
+export const addHabitToGoal = async (req, res) => {
+  const userId = req.user._id;
+
+  const { goalId, habitId } = req.params;
+
+  if (!mongoose.isValidObjectId(goalId) || !mongoose.isValidObjectId(habitId)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid goal ID or habit ID",
+    });
+  }
+
+  const goal = await Goal.findOne({
+    _id: goalId,
+    userId,
+  });
+
+  if (!goal) {
+    return res.status(404).json({
+      status: false,
+      message: "Goal not found",
+    });
+  }
+
+  const habit = await Habit.findOne({
+    _id: habitId,
+    userId,
+  });
+
+  if (!habit) {
+    return res.status(404).json({
+      status: false,
+      message: "Habit not found",
+    });
+  }
+
+  const alreadyAdded = goal.habitIds.some(
+    (id) => id.toString() === habitId.toString(),
+  );
+
+  if (alreadyAdded) {
+    return res.status(409).json({
+      status: false,
+      message: "Habit already added to this goal",
+    });
+  }
+
+  goal.habitIds.push(habitId);
+
+  const updatedGoal = await goal.save();
+
+  await updatedGoal.populate("habitIds");
+
+  res.status(200).json({
+    status: true,
+    message: "Habit added to goal successfully",
+    data: updatedGoal,
+  });
+};
+
+export const removeHabitFromGoal = async (req, res) => {
+  const userId = req.user._id;
+
+  const { goalId, habitId } = req.params;
+
+  // Validate IDs
+
+  if (!mongoose.isValidObjectId(goalId) || !mongoose.isValidObjectId(habitId)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid goal ID or habit ID",
+    });
+  }
+
+  const goal = await Goal.findOne({
+    _id: goalId,
+    userId,
+  });
+
+  if (!goal) {
+    return res.status(404).json({
+      status: false,
+      message: "Goal not found",
+    });
+  }
+
+  //Check relationship
+
+  const habitExists = goal.habitIds.some(
+    (id) => id.toString() === habitId.toString(),
+  );
+
+  if (!habitExists) {
+    return res.status(404).json({
+      status: false,
+      message: "Habit is not attached to this goal",
+    });
+  }
+
+  //Remove habit
+
+  goal.habitIds = goal.habitIds.filter(
+    (id) => id.toString() !== habitId.toString(),
+  );
+
+  const updatedGoal = await goal.save();
+
+  await updatedGoal.populate("habitIds");
+
+  res.status(200).json({
+    status: true,
+    message: "Habit removed from goal successfully",
+    data: updatedGoal,
   });
 };

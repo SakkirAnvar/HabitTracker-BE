@@ -79,7 +79,7 @@ export const validateHabitData = (req) => {
 };
 
 //Goal validation
-export const validateGoal = (data, isUpdate = false) => {
+export const validateGoal = (req, isUpdate = false) => {
   const {
     title,
     description,
@@ -88,7 +88,7 @@ export const validateGoal = (data, isUpdate = false) => {
     unit,
     startDate,
     deadLine,
-  } = data;
+  } = req.body;
 
   // Required fields for CREATE
   if (!isUpdate) {

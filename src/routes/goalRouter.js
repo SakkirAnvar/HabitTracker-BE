@@ -2,10 +2,12 @@ import express from "express";
 import { userAuth } from "../middlewares/auth.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import {
+  addHabitToGoal,
   createGoal,
   deleteGoal,
   getAllGoal,
   getGoal,
+  removeHabitFromGoal,
   updateGoal,
 } from "../controllers/goalController.js";
 
@@ -16,5 +18,18 @@ router.get("/goals/:id", userAuth, asyncHandler(getGoal));
 router.get("/goals", userAuth, asyncHandler(getAllGoal));
 router.patch("/goals/:id", userAuth, asyncHandler(updateGoal));
 router.delete("/goals/:id", userAuth, asyncHandler(deleteGoal));
+
+//goal habit relationship
+router.post(
+  "/goals/:goalId/habits/:habitId",
+  userAuth,
+  asyncHandler(addHabitToGoal),
+);
+
+router.delete(
+  "/goals/:goalId/habits/:habitId",
+  userAuth,
+  asyncHandler(removeHabitFromGoal),
+);
 
 export default router;

@@ -5,7 +5,7 @@ import { validateHabitData } from "../utils/validate.js";
 export const createHabit = async (req, res) => {
   validateHabitData(req);
 
-  const { habitName, category, type, target, unit, frequency, active } =
+  const { habitName, category, type, target, unit, frequency,scheduledDays,scheduledDates, active } =
     req.body;
 
   const user = req.user;
@@ -30,6 +30,8 @@ export const createHabit = async (req, res) => {
     target,
     unit,
     frequency,
+    scheduledDates,
+    scheduledDays,
     active,
   });
 
@@ -82,7 +84,7 @@ export const getHabit = async (req, res) => {
 
 //Update Habit
 export const updateHabit = async (req, res) => {
-  const { habitName, category, type, target, unit, frequency, active } =
+  const { habitName, category, type, target, unit, frequency,scheduledDates, scheduledDays, active } =
     req.body;
 
   const habitId = req.params.id;
@@ -96,6 +98,8 @@ export const updateHabit = async (req, res) => {
       target,
       unit,
       frequency,
+      scheduledDates,
+      scheduledDays,
       active,
     },
     { returnDocument: "after", runValidators: true },

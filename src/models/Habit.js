@@ -45,6 +45,29 @@ const habitSchema = new Schema(
       required: true,
       enum: ["daily", "weekly", "monthly"],
     },
+    
+    scheduledDays: [
+      {
+        type: String,
+        enum: [
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
+          "sunday",
+        ],
+      },
+    ],
+
+    scheduledDates: [
+      {
+        type: Number,
+        min: 1,
+        max: 31,
+      },
+    ],
 
     active: {
       type: Boolean,

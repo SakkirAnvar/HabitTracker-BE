@@ -7,14 +7,7 @@ import {
 
 import { isValidObjectId } from "mongoose";
 
-/*
-|--------------------------------------------------------------------------
-| Get Daily Analytics
-|--------------------------------------------------------------------------
-| GET /analytics/daily
-| GET /analytics/daily?date=2026-09-02
-|--------------------------------------------------------------------------
-*/
+//Get Daily Analytics
 
 export const getDailyAnalytics = async (req, res) => {
   const userId = req.user._id;
@@ -37,14 +30,7 @@ export const getDailyAnalytics = async (req, res) => {
   });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Weekly Analytics
-|--------------------------------------------------------------------------
-| GET /analytics/weekly
-| GET /analytics/weekly?date=2026-09-02
-|--------------------------------------------------------------------------
-*/
+//Get Weekly Analytics
 
 export const getWeeklyAnalytics = async (req, res) => {
   const userId = req.user._id;
@@ -67,14 +53,7 @@ export const getWeeklyAnalytics = async (req, res) => {
   });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Monthly Analytics
-|--------------------------------------------------------------------------
-| GET /analytics/monthly
-| GET /analytics/monthly?date=2026-09-02
-|--------------------------------------------------------------------------
-*/
+//Get Monthly Analytics
 
 export const getMonthlyAnalytics = async (req, res) => {
   const userId = req.user._id;
@@ -97,17 +76,9 @@ export const getMonthlyAnalytics = async (req, res) => {
   });
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get Habit Streak
-|--------------------------------------------------------------------------
-| GET /analytics/habits/:habitId/streak
-|--------------------------------------------------------------------------
-*/
-
+//Get Habit Streak
 export const getHabitStreak = async (req, res) => {
   const userId = req.user._id;
-
   const { habitId } = req.params;
 
   if (!isValidObjectId(habitId)) {
@@ -119,7 +90,7 @@ export const getHabitStreak = async (req, res) => {
 
   const streak = await calculateHabitStreak(userId, habitId);
 
-  res.status(200).json({
+  return res.status(200).json({
     status: true,
     message: "Habit streak fetched successfully",
     data: streak,

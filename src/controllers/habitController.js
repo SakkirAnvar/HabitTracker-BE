@@ -1,12 +1,21 @@
 import Habit from "../models/Habit.js";
-import { validateHabitData } from "../utils/validate.js";
+import { validateHabitData, validateHabitFilters } from "../utils/validate.js";
 
 //Create Habit
 export const createHabit = async (req, res) => {
   validateHabitData(req);
 
-  const { habitName, category, type, target, unit, frequency,scheduledDays,scheduledDates, active } =
-    req.body;
+  const {
+    habitName,
+    category,
+    type,
+    target,
+    unit,
+    frequency,
+    scheduledDays,
+    scheduledDates,
+    active,
+  } = req.body;
 
   const user = req.user;
 
@@ -46,17 +55,65 @@ export const createHabit = async (req, res) => {
 //Fetch All Habit
 export const getAllHabits = async (req, res) => {
   const user = req.user;
+  const id = user._id;
 
-  const habits = await Habit.find({ userId: user._id });
+  validateHabitFilters(req.query);
 
-  if (habits.length === 0) {
-    res.status(404).json({
-      status: false,
-      message: "No Habits Found",
-    });
+  const { search, category, active, frequency, date } = req.query;
+
+  const filter = { userId: id };
+
+  //search by habitName
+  if (search) {
+    filter.habitName = {
+      $regex: search.trim(),
+      $options: "i",
+    };
   }
 
-  res.status(201).json({
+  //categoryFilter
+  if (category) {
+    filter.category = {
+      $regex: `^${category.trim()}$`,
+      $options: "i",
+    };
+  }
+
+  if (active !== undefined) {
+    filter.active = active === "true";
+  }
+
+  // Frequency filter
+  if (frequency) {
+    filter.frequency = frequency;
+  }
+
+  if (date) {
+    const startDate = new Date(`${date}T00:00:00.000z`);
+
+    const endDate = new Date(startDate);
+
+    filter.createdAt = {
+      $gte: startDate,
+      $lt: endDate,
+    };
+  }
+
+  console.log("QUERY:", req.query);
+  console.log("FILTER:", filter);
+
+  const habits = await Habit.find(filter).sort({
+    createdAt: -1,
+  });
+
+  // if (habits.length === 0) {
+  //   res.status(404).json({
+  //     status: false,
+  //     message: "No Habits Found",
+  //   });
+  // }
+
+  res.status(200).json({
     status: true,
     message: "Habit data retrived Successfully",
     data: habits,
@@ -84,8 +141,17 @@ export const getHabit = async (req, res) => {
 
 //Update Habit
 export const updateHabit = async (req, res) => {
-  const { habitName, category, type, target, unit, frequency,scheduledDates, scheduledDays, active } =
-    req.body;
+  const {
+    habitName,
+    category,
+    type,
+    target,
+    unit,
+    frequency,
+    scheduledDates,
+    scheduledDays,
+    active,
+  } = req.body;
 
   const habitId = req.params.id;
 

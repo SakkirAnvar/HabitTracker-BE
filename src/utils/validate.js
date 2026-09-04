@@ -273,3 +273,32 @@ export const changePasswordValidation = (req) => {
     throw new Error("Enter a strong password");
   }
 };
+
+//validatehabitFilters
+export const validateHabitFilters = (query) =>{
+  const {search, category, active, frequency, date} = query
+
+  if(search !== undefined && typeof search !== "string"){
+    throw new Error("Search must be a valid Characters")
+  }
+
+  if(category !== undefined && typeof category !== "string"){
+    throw new Error("Category must be a valid Characters")
+  }
+
+  if(active !== undefined && !["true","false"].includes(active)){
+    throw new Error("Active must be true or false")
+  }
+
+  if(frequency !== undefined && !["daily", "weekly", "custom"].includes(frequency)){
+    throw new Error("Invalid frequency")
+  }
+
+  if(date !== undefined){
+    const filterDate = new Date(date)
+
+    if(isNaN(filterDate.getTime())){
+      throw new Error("Invalid date")
+    }
+  }
+}

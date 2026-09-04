@@ -1,10 +1,10 @@
 import express from "express";
-
 import {
   getDailyAnalytics,
   getWeeklyAnalytics,
   getMonthlyAnalytics,
   getHabitStreak,
+  getCalendarAnalytics,
 } from "../controllers/analyticsController.js";
 
 import asyncHandler from "../utils/asyncHandler.js";
@@ -20,5 +20,6 @@ router.get(
   userAuth,
   asyncHandler(getHabitStreak),
 );
+router.get("/analytics/calendar", userAuth, asyncHandler(getCalendarAnalytics));
 
 export default router;

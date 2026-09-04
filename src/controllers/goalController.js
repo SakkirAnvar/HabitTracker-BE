@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Goal from "../models/Goal.js";
 import { validateGoal } from "../utils/validate.js";
 import Habit from "../models/Habit.js";
+import { calculateGoalProgress } from "../services/goalService.js";
 
 //createGoal
 export const createGoal = async (req, res) => {
@@ -178,12 +179,6 @@ export const updateGoal = async (req, res) => {
     goal.deadLine = deadline;
   }
 
-  if (goal.currentProgress >= goal.target) {
-    goal.status = "completed";
-  } else {
-    goal.status = "active";
-  }
-
   const updatedGoal = await goal.save();
 
   res.status(200).json({
@@ -277,6 +272,7 @@ export const addHabitToGoal = async (req, res) => {
   });
 };
 
+//removeHabitFromGoal
 export const removeHabitFromGoal = async (req, res) => {
   const userId = req.user._id;
 
@@ -330,5 +326,25 @@ export const removeHabitFromGoal = async (req, res) => {
     status: true,
     message: "Habit removed from goal successfully",
     data: updatedGoal,
+  });
+};
+
+//getGoalProgress
+export const getGoalProgress = async (req, res) => {
+  const userId = req.user._id;
+  const { goalId } = req.params;
+  if (!mongoose.isValidObjectId(goalId)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid goal Id",
+    });
+  }
+
+  const progress = await calculateGoalProgress(userId, goalId);
+
+  return res.status(200).json({
+    status: true,
+    message: "Goal Progress fetched successfully",
+    data: progress,
   });
 };

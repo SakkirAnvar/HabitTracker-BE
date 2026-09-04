@@ -46,16 +46,7 @@ const isHabitScheduled = (habit, date) => {
     return currentDate.getDay() === createdDate.getDay();
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Monthly
-  |--------------------------------------------------------------------------
-  |
-  | Example:
-  | Habit created on the 15th.
-  | It is scheduled every 15th of the month.
-  |
-  */
+  // Monthly
 
   if (habit.frequency === "monthly") {
     return currentDate.getDate() === createdDate.getDate();
@@ -64,32 +55,20 @@ const isHabitScheduled = (habit, date) => {
   return false;
 };
 
-/*
-|--------------------------------------------------------------------------
-| CALCULATE LOG COMPLETION
-|--------------------------------------------------------------------------
-*/
+// CALCULATE LOG COMPLETION
 
 const calculateLogCompletion = (habit, log) => {
   if (!log) {
     return 0;
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Boolean Habit
-  |--------------------------------------------------------------------------
-  */
+  // Boolean Habit
 
   if (habit.type === "boolean") {
     return log.completed ? 100 : 0;
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Count / Duration Habit
-  |--------------------------------------------------------------------------
-  */
+  // Count / Duration Habit
 
   if (habit.type === "count" || habit.type === "duration") {
     if (!habit.target || habit.target <= 0) {
@@ -104,11 +83,7 @@ const calculateLogCompletion = (habit, log) => {
   return 0;
 };
 
-/*
-|--------------------------------------------------------------------------
-| DAILY ANALYTICS
-|--------------------------------------------------------------------------
-*/
+// DAILY ANALYTICS
 
 export const calculateDailyAnalytics = async (userId, date = new Date()) => {
   const day = getStartOfDay(date);
@@ -116,11 +91,7 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
 
   const dateString = getDateString(day);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Get active habits
-  |--------------------------------------------------------------------------
-  */
+  // Get active habits
 
   const habits = await Habit.find({
     userId,
@@ -130,11 +101,7 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     },
   }).lean();
 
-  /*
-  |--------------------------------------------------------------------------
-  | Get logs for this day
-  |--------------------------------------------------------------------------
-  */
+  // Get logs for this day
 
   const logs = await HabitLog.find({
     userId,
@@ -144,11 +111,7 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     },
   }).lean();
 
-  /*
-  |--------------------------------------------------------------------------
-  | Create log lookup map
-  |--------------------------------------------------------------------------
-  */
+  // Create log lookup map
 
   const logMap = new Map();
 
@@ -156,20 +119,12 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     logMap.set(log.habitId.toString(), log);
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Overall statistics
-  |--------------------------------------------------------------------------
-  */
+  // Overall statistics
 
   let totalExpected = 0;
   let totalCompleted = 0;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Category statistics
-  |--------------------------------------------------------------------------
-  */
+  // Category statistics
 
   const categoryStats = {
     spiritual: {
@@ -197,44 +152,24 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     },
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Individual habit statistics
-  |--------------------------------------------------------------------------
-  */
+  //Individual habit statistics
 
   const habitStats = [];
 
-  /*
-  |--------------------------------------------------------------------------
-  | Process habits
-  |--------------------------------------------------------------------------
-  */
+  // Process habits
 
   for (const habit of habits) {
-    /*
-    |--------------------------------------------------------------------------
-    | Check whether habit is scheduled today
-    |--------------------------------------------------------------------------
-    */
+    //Check whether habit is scheduled today
 
     if (!isHabitScheduled(habit, day)) {
       continue;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Find today's log
-    |--------------------------------------------------------------------------
-    */
+    //Find today's log
 
     const log = logMap.get(habit._id.toString());
 
-    /*
-    |--------------------------------------------------------------------------
-    | Calculate completion
-    |--------------------------------------------------------------------------
-    */
+    // Calculate completion
 
     const completion = calculateLogCompletion(habit, log);
 
@@ -518,12 +453,7 @@ export const calculateMonthlyAnalytics = async (userId, date = new Date()) => {
   return calculateRangeAnalytics(userId, firstDay, lastDay);
 };
 
-/*
-|--------------------------------------------------------------------------
-| HABIT STREAK
-|--------------------------------------------------------------------------
-*/
-
+//HABIT STREAK
 export const calculateHabitStreak = async (userId, habitId) => {
   /*
   |--------------------------------------------------------------------------
@@ -701,16 +631,14 @@ export const calculateHabitStreak = async (userId, habitId) => {
       if (habit.frequency === "daily" && difference === 1) {
         runningStreak++;
       } else if (habit.frequency === "weekly" && difference === 7) {
-
-      /*
+        /*
       |--------------------------------------------------------------------------
       | Weekly habit
       |--------------------------------------------------------------------------
       */
         runningStreak++;
       } else if (habit.frequency === "monthly") {
-
-      /*
+        /*
       |--------------------------------------------------------------------------
       | Monthly habit
       |--------------------------------------------------------------------------
@@ -732,8 +660,7 @@ export const calculateHabitStreak = async (userId, habitId) => {
           runningStreak = 1;
         }
       } else {
-
-      /*
+        /*
       |--------------------------------------------------------------------------
       | Invalid consecutive date
       |--------------------------------------------------------------------------
@@ -759,5 +686,51 @@ export const calculateHabitStreak = async (userId, habitId) => {
     currentStreak,
 
     longestStreak,
+  };
+};
+
+export const calculateCalendarAnalytics = async (userId, year, month) => {
+  // month is 1-12
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
+
+  const calendar = [];
+
+  const currentDate = new Date(firstDay);
+
+  while (currentDate <= lastDay) {
+    const dailyAnalytics = await calculateDailyAnalytics(
+      userId,
+      new Date(currentDate),
+    );
+
+    let status = "none";
+
+    if (dailyAnalytics.expected > 0) {
+      if (dailyAnalytics.overall === 100) {
+        status = "completed";
+      } else if (dailyAnalytics.overall >= 50) {
+        status = "partial";
+      } else {
+        status = "missed";
+      }
+    }
+
+    calendar.push({
+      date: dailyAnalytics.date,
+      status,
+      completion: dailyAnalytics.overall,
+      completed: dailyAnalytics.completed,
+      expected: dailyAnalytics.expected,
+    });
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return {
+    year,
+    month,
+    daysInMonth: lastDay.getDate(),
+    calendar,
   };
 };

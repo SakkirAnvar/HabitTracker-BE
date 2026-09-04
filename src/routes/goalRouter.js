@@ -7,6 +7,7 @@ import {
   deleteGoal,
   getAllGoal,
   getGoal,
+  getGoalProgress,
   removeHabitFromGoal,
   updateGoal,
 } from "../controllers/goalController.js";
@@ -31,5 +32,8 @@ router.delete(
   userAuth,
   asyncHandler(removeHabitFromGoal),
 );
+
+//goal progress
+router.get("/goals/:goalId/progress", userAuth, asyncHandler(getGoalProgress));
 
 export default router;

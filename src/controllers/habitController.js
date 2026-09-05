@@ -79,6 +79,7 @@ export const getAllHabits = async (req, res) => {
     };
   }
 
+  //active 
   if (active !== undefined) {
     filter.active = active === "true";
   }
@@ -88,6 +89,7 @@ export const getAllHabits = async (req, res) => {
     filter.frequency = frequency;
   }
 
+//date filter
   if (date) {
     const startDate = new Date(`${date}T00:00:00.000z`);
 
@@ -99,19 +101,16 @@ export const getAllHabits = async (req, res) => {
     };
   }
 
-  console.log("QUERY:", req.query);
-  console.log("FILTER:", filter);
-
   const habits = await Habit.find(filter).sort({
     createdAt: -1,
   });
 
-  // if (habits.length === 0) {
-  //   res.status(404).json({
-  //     status: false,
-  //     message: "No Habits Found",
-  //   });
-  // }
+  if (habits.length === 0) {
+    res.status(404).json({
+      status: false,
+      message: "No Habits Found",
+    });
+  }
 
   res.status(200).json({
     status: true,

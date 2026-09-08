@@ -106,7 +106,7 @@ export const getAllHabits = async (req, res) => {
   });
 
   if (habits.length === 0) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "No Habits Found",
     });
@@ -125,7 +125,7 @@ export const getHabit = async (req, res) => {
   const habit = await Habit.findOne(habitId);
 
   if (!habit) {
-    res.status(401).json({
+   return  res.status(401).json({
       status: false,
       message: "Something went wrong!",
     });
@@ -224,7 +224,7 @@ export const deleteHabit = async (req, res) => {
   });
 
   if (!habit) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "Habit not found or you are not authorized to delete it",
     });

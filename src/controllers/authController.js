@@ -24,12 +24,16 @@ export const signupUser = async (req, res) => {
 
   const savedUser = await user.save();
 
+  const userResponse = savedUser.toObject();
+
+  delete userResponse.password;
+
   await jwtSign(savedUser, res);
 
   res.status(201).send({
     status: true,
     message: "User Created Successfully",
-    data: savedUser,
+    data: userResponse,
   });
 };
 
@@ -37,10 +41,13 @@ export const signupUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const userData = await validateLoginUser(req, res);
 
+  const safeUser = userData.toObject();
+  delete safeUser.password;
+
   res.status(200).send({
     status: true,
     message: "Logged In Successfully",
-    data: userData,
+    data: safeUser,
   });
 };
 
@@ -80,7 +87,7 @@ export const updateUser = async (req, res) => {
   const updatedUser = await User.findByIdAndUpdate({ _id }, updateData, {
     returnDocument: "after",
     runValidators: true,
-  });
+  }).select("-password");
 
   if (!updatedUser) {
     res.status(404).json({
@@ -98,20 +105,17 @@ export const updateUser = async (req, res) => {
 
 //viewProfile
 export const viewProfile = async (req, res) => {
-  const user = req.user;
-
+  const user = await User.findById(req.user._id).select("-password");
   if (!user) {
-    return res.status(404).json({
-      status: false,
-      message: "User not found!",
-    });
+    return res.status(404).json({ status: false, message: "User not found!" });
   }
-
-  res.status(200).json({
-    status: true,
-    message: "User Profile Retrieved Successfully",
-    data: user,
-  });
+  return res
+    .status(200)
+    .json({
+      status: true,
+      message: "User Profile Retrieved Successfully",
+      data: user,
+    });
 };
 
 //changePassword

@@ -37,7 +37,7 @@ export const signupUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   const userData = await validateLoginUser(req, res);
 
-  res.status(201).send({
+  res.status(200).send({
     status: true,
     message: "Logged In Successfully",
     data: userData,
@@ -101,7 +101,7 @@ export const viewProfile = async (req, res) => {
   const user = req.user;
 
   if (!user) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "User not found!",
     });

@@ -76,13 +76,13 @@ export const getAllHabitLog = async (req, res) => {
   const habitLogs = await HabitLog.find({ userId: req.user._id });
 
   if (habitLogs.length === 0) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "Habit Log Not Found",
     });
   }
 
-  res.status(201).json({
+  res.status(200).json({
     status: true,
     message: "HabitLog retrieved successfully",
     data: habitLogs,

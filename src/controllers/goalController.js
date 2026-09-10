@@ -142,7 +142,7 @@ export const updateGoal = async (req, res) => {
     currentProgress,
     unit,
     startDate,
-    deadline,
+    deadLine,
   } = req.body;
 
   /*
@@ -175,7 +175,7 @@ export const updateGoal = async (req, res) => {
     goal.startDate = startDate;
   }
 
-  if (deadline !== undefined) {
+  if (deadLine !== undefined) {
     goal.deadLine = deadline;
   }
 

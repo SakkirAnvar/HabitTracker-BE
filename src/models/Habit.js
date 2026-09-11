@@ -22,10 +22,16 @@ const habitSchema = new Schema(
       trim: true,
     },
 
+    description:{
+      type: String,
+      trim: true,
+      maxlength:100,
+    },
+
     type: {
       type: String,
       required: true,
-      enum: ["boolean", "count", "duration"],
+      enum: ["boolean", "count", "duration", "rating"],
     },
 
     target: {

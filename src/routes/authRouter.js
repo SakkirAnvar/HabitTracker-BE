@@ -9,13 +9,19 @@ import {
   viewProfile,
 } from "../controllers/authController.js";
 import { userAuth } from "../middlewares/auth.js";
+import uploadProfilePhoto from "../middlewares/upload.js";
 
 const router = express.Router();
 
 router.post("/signup", asyncHandler(signupUser));
 router.post("/login", asyncHandler(loginUser));
 router.post("/logout", asyncHandler(logoutUser));
-router.patch("/profile", userAuth, asyncHandler(updateUser));
+router.patch(
+  "/profile",
+  userAuth,
+  uploadProfilePhoto.single("profilePhoto"),
+  updateUser,
+);
 router.get("/me", userAuth, asyncHandler(viewProfile));
 router.patch("/changePassword", userAuth, asyncHandler(changePassword));
 

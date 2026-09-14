@@ -35,6 +35,8 @@ export const createHabitLog = async (req, res) => {
 
   const tomorrow = new Date(habitDate);
   tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const completed =
+    habit.type === "boolean" ? value >= 1 : value >= habit.target;
 
   const habitLog = await HabitLog.findOneAndUpdate(
     {
@@ -48,7 +50,7 @@ export const createHabitLog = async (req, res) => {
     {
       $set: {
         value,
-        completed: value >= habit.target,
+        completed,
       },
       $setOnInsert: {
         habitId: habit._id,
@@ -172,7 +174,8 @@ export const updateHabitLog = async (req, res) => {
   }
 
   habitLog.value = value;
-  habitLog.completed = value >= habit.target;
+  habitLog.completed =
+    habit.type === "boolean" ? value >= 1 : value >= habit.target;
 
   const updatedHabitLog = await habitLog.save();
 

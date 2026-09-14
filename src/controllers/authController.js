@@ -67,8 +67,13 @@ export const logoutUser = async (req, res) => {
 
 //update Profile
 export const updateUser = async (req, res) => {
-  const { firstName, lastName, profilePhoto } = req.body;
-  const _id = req.user._id;
+  console.log("BODY:", req.body);
+  console.log("FILE:", req.file);
+
+  const { firstName, lastName } = req.body;
+
+  const user = req.user;
+  const _id = user._id;
 
   const updateData = {};
 
@@ -80,23 +85,23 @@ export const updateUser = async (req, res) => {
     updateData.lastName = lastName;
   }
 
-  if (profilePhoto !== undefined) {
-    updateData.profilePhoto = profilePhoto;
+  if (req.file) {
+    updateData.profilePhoto = `/uploads/profiles/${req.file.filename}`;
   }
 
-  const updatedUser = await User.findByIdAndUpdate({ _id }, updateData, {
-    returnDocument: "after",
+  const updatedUser = await User.findByIdAndUpdate(_id, updateData, {
+    new: true,
     runValidators: true,
   }).select("-password");
 
   if (!updatedUser) {
-    res.status(404).json({
+    return res.status(404).json({
       status: false,
       message: "Failed to update profile",
     });
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     status: true,
     message: "User Profile Updated Successfully",
     data: updatedUser,
@@ -109,13 +114,11 @@ export const viewProfile = async (req, res) => {
   if (!user) {
     return res.status(404).json({ status: false, message: "User not found!" });
   }
-  return res
-    .status(200)
-    .json({
-      status: true,
-      message: "User Profile Retrieved Successfully",
-      data: user,
-    });
+  return res.status(200).json({
+    status: true,
+    message: "User Profile Retrieved Successfully",
+    data: user,
+  });
 };
 
 //changePassword

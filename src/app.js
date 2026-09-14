@@ -3,13 +3,18 @@ import "dotenv/config";
 import connectDB from "./config/db.js";
 import router from "./routes/router.js";
 import cookieParser from "cookie-parser";
-import cors from "cors"
+import cors from "cors";
+import path from "path";
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+
+app.use(express.static(path.join(process.cwd(), "public")));
+
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 app.use("/", router);
 

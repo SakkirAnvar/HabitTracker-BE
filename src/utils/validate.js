@@ -51,7 +51,14 @@ export const validateLoginUser = async (req, res) => {
 
 //Habit Validation
 export const validateHabitData = (req) => {
-  const { habitName, category, type, target, unit, frequency } = req.body;
+  const {
+    habitName,
+    category,
+    type,
+    target,
+    unit,
+    frequency,
+  } = req.body;
 
   if (!habitName?.trim()) {
     throw new Error("Habit name is required");
@@ -65,12 +72,19 @@ export const validateHabitData = (req) => {
     throw new Error("Invalid habit type");
   }
 
-  if (target === undefined || target === null || target <= 0) {
-    throw new Error("Target must be greater than 0");
-  }
+  // Target and unit are required only for non-boolean habits
+  if (type !== "boolean") {
+    if (
+      target === undefined ||
+      target === null ||
+      Number(target) <= 0
+    ) {
+      throw new Error("Target must be greater than 0");
+    }
 
-  if (!unit?.trim()) {
-    throw new Error("Unit is required");
+    if (!unit?.trim()) {
+      throw new Error("Unit is required");
+    }
   }
 
   if (!["daily", "weekly", "monthly"].includes(frequency)) {

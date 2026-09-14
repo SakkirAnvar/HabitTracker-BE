@@ -7,6 +7,7 @@ export const createHabit = async (req, res) => {
 
   const {
     habitName,
+    description,
     category,
     type,
     target,
@@ -34,6 +35,7 @@ export const createHabit = async (req, res) => {
   const habit = new Habit({
     userId: user._id,
     habitName: habitName.trim(),
+    description,
     category,
     type,
     target,

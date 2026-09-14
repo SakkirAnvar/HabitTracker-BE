@@ -36,13 +36,11 @@ const habitSchema = new Schema(
 
     target: {
       type: Number,
-      required: true,
       min: 1,
     },
 
     unit: {
       type: String,
-      required: true,
       trim: true,
     },
 

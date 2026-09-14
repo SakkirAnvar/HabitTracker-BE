@@ -70,7 +70,7 @@ export const updateUser = async (req, res) => {
   console.log("BODY:", req.body);
   console.log("FILE:", req.file);
 
-  const { firstName, lastName } = req.body;
+  const { firstName, lastName , theme} = req.body;
 
   const user = req.user;
   const _id = user._id;
@@ -84,6 +84,17 @@ export const updateUser = async (req, res) => {
   if (lastName !== undefined) {
     updateData.lastName = lastName;
   }
+
+  if (theme !== undefined) {
+  if (!["light", "dark", "system"].includes(theme)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid theme",
+    });
+  }
+
+  updateData.theme = theme;
+}
 
   if (req.file) {
     updateData.profilePhoto = `/uploads/profiles/${req.file.filename}`;

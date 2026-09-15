@@ -2,16 +2,22 @@ import Habit from "../models/Habit.js";
 import HabitLog from "../models/HabitLog.js";
 import mongoose from "mongoose";
 
-//createHabitLog
 export const createHabitLog = async (req, res) => {
   const habitId = req.params.id;
-  const { value } = req.body;
   const userId = req.user._id;
+  const { value, date } = req.body;
 
   if (value === undefined || typeof value !== "number" || value < 0) {
     return res.status(400).json({
       status: false,
       message: "Progress value must be a valid number",
+    });
+  }
+
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid date. Expected YYYY-MM-DD",
     });
   }
 
@@ -28,13 +34,6 @@ export const createHabitLog = async (req, res) => {
     });
   }
 
-  // Store the daily date as UTC midnight
-  const today = new Date();
-  const dateString = today.toISOString().split("T")[0];
-  const habitDate = new Date(`${dateString}T00:00:00.000Z`);
-
-  const tomorrow = new Date(habitDate);
-  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   const completed =
     habit.type === "boolean" ? value >= 1 : value >= habit.target;
 
@@ -42,10 +41,7 @@ export const createHabitLog = async (req, res) => {
     {
       habitId: habit._id,
       userId,
-      date: {
-        $gte: habitDate,
-        $lt: tomorrow,
-      },
+      date,
     },
     {
       $set: {
@@ -55,12 +51,13 @@ export const createHabitLog = async (req, res) => {
       $setOnInsert: {
         habitId: habit._id,
         userId,
-        date: habitDate,
+        date,
       },
     },
     {
-      returnDocument: "after",
+      new: true,
       upsert: true,
+      returnDocument: "after",
       runValidators: true,
     },
   );
@@ -72,10 +69,10 @@ export const createHabitLog = async (req, res) => {
   });
 };
 
-//getAllHabitLog
 export const getAllHabitLog = async (req, res) => {
-  const user = req.user;
-  const habitLogs = await HabitLog.find({ userId: req.user._id });
+  const habitLogs = await HabitLog.find({
+    userId: req.user._id,
+  });
 
   if (habitLogs.length === 0) {
     return res.status(404).json({
@@ -84,36 +81,27 @@ export const getAllHabitLog = async (req, res) => {
     });
   }
 
-  res.status(200).json({
+  return res.status(200).json({
     status: true,
     message: "HabitLog retrieved successfully",
     data: habitLogs,
   });
 };
 
-//getHabitLogByDate
 export const getHabitLogByDate = async (req, res) => {
   const userId = req.user._id;
   const { date } = req.params;
 
-  const habitLogDate = new Date(`${date}T00:00:00.000Z`);
-
-  if (isNaN(habitLogDate.getTime())) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({
       status: false,
       message: "Invalid date",
     });
   }
 
-  const nextDate = new Date(habitLogDate);
-  nextDate.setUTCDate(nextDate.getUTCDate() + 1);
-
   const habitLogs = await HabitLog.find({
     userId,
-    date: {
-      $gte: habitLogDate,
-      $lt: nextDate,
-    },
+    date,
   }).populate("habitId");
 
   if (habitLogs.length === 0) {
@@ -133,7 +121,7 @@ export const getHabitLogByDate = async (req, res) => {
 export const updateHabitLog = async (req, res) => {
   const userId = req.user._id;
   const { id } = req.params;
-  const { value } = req.body;
+  const { value, date } = req.body;
 
   if (!mongoose.isValidObjectId(id)) {
     return res.status(400).json({
@@ -146,6 +134,13 @@ export const updateHabitLog = async (req, res) => {
     return res.status(400).json({
       status: false,
       message: "Progress value must be a valid number",
+    });
+  }
+
+  if (date !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return res.status(400).json({
+      status: false,
+      message: "Invalid date. Expected YYYY-MM-DD",
     });
   }
 
@@ -164,6 +159,7 @@ export const updateHabitLog = async (req, res) => {
   const habit = await Habit.findOne({
     _id: habitLog.habitId,
     userId,
+    active: true,
   });
 
   if (!habit) {
@@ -174,6 +170,11 @@ export const updateHabitLog = async (req, res) => {
   }
 
   habitLog.value = value;
+
+  if (date) {
+    habitLog.date = date;
+  }
+
   habitLog.completed =
     habit.type === "boolean" ? value >= 1 : value >= habit.target;
 

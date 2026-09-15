@@ -23,11 +23,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: "/default-avatar.png",
     },
-    theme: {
-      type: String,
-      enum: ["light", "dark", "system"],
-      default: "system",
-    },
   },
   {
     timestamps: true,

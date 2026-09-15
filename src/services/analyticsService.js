@@ -3,74 +3,153 @@ import HabitLog from "../models/HabitLog.js";
 
 const CATEGORIES = ["spiritual", "skills", "physical", "personal"];
 
-// DATE HELPERS
-const getDateString = (date) => {
-  return date.toISOString().split("T")[0];
-};
-
-const getStartOfDay = (date) => {
-  const result = new Date(date);
-
-  result.setHours(0, 0, 0, 0);
-
-  return result;
-};
-
-const getEndOfDay = (date) => {
-  const result = new Date(date);
-
-  result.setHours(23, 59, 59, 999);
-
-  return result;
-};
-
-// HABIT SCHEDULING
-const isHabitScheduled = (habit, date) => {
-  const currentDate = getStartOfDay(date);
-  const createdDate = getStartOfDay(habit.createdAt);
-
-  // Habit should not be counted before it was created
-  if (currentDate < createdDate) {
+const isValidDateString = (date) => {
+  if (typeof date !== "string") {
     return false;
   }
 
-  // Daily
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return false;
+  }
+
+  const [year, month, day] = date.split("-").map(Number);
+
+  const testDate = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    testDate.getUTCFullYear() === year &&
+    testDate.getUTCMonth() === month - 1 &&
+    testDate.getUTCDate() === day
+  );
+};
+
+const dateToString = (date) => {
+  const year = date.getUTCFullYear();
+
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+
+  const day = String(date.getUTCDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getTodayDateString = () => {
+  const now = new Date();
+
+  const year = now.getFullYear();
+
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const parseDateString = (date) => {
+  const [year, month, day] = date.split("-").map(Number);
+
+  return {
+    year,
+    month,
+    day,
+  };
+};
+
+const addDays = (dateString, amount) => {
+  const { year, month, day } = parseDateString(dateString);
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  date.setUTCDate(date.getUTCDate() + amount);
+
+  return dateToString(date);
+};
+
+const getDayOfWeek = (dateString) => {
+  const { year, month, day } = parseDateString(dateString);
+
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+};
+
+const getDayOfMonth = (dateString) => {
+  return parseDateString(dateString).day;
+};
+
+const getMonthNumber = (dateString) => {
+  return parseDateString(dateString).month;
+};
+
+const getYear = (dateString) => {
+  return parseDateString(dateString).year;
+};
+
+const differenceInDays = (firstDate, secondDate) => {
+  const first = parseDateString(firstDate);
+  const second = parseDateString(secondDate);
+
+  const firstUTC = Date.UTC(first.year, first.month - 1, first.day);
+
+  const secondUTC = Date.UTC(second.year, second.month - 1, second.day);
+
+  return Math.round((firstUTC - secondUTC) / (1000 * 60 * 60 * 24));
+};
+
+const isHabitScheduled = (habit, dateString) => {
+  if (!isValidDateString(dateString)) {
+    return false;
+  }
+
+  const createdDate = dateToString(new Date(habit.createdAt));
+
+  if (dateString < createdDate) {
+    return false;
+  }
 
   if (habit.frequency === "daily") {
     return true;
   }
 
-  // Weekly
-
   if (habit.frequency === "weekly") {
-    return currentDate.getDay() === createdDate.getDay();
+    return getDayOfWeek(dateString) === getDayOfWeek(createdDate);
   }
 
-  // Monthly
-
   if (habit.frequency === "monthly") {
-    return currentDate.getDate() === createdDate.getDate();
+    return getDayOfMonth(dateString) === getDayOfMonth(createdDate);
+  }
+
+  if (habit.frequency === "custom") {
+    const dayNames = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ];
+
+    const currentDay = dayNames[getDayOfWeek(dateString)];
+
+    return Boolean(habit.scheduledDays?.includes(currentDay));
   }
 
   return false;
 };
-
-// CALCULATE LOG COMPLETION
 
 const calculateLogCompletion = (habit, log) => {
   if (!log) {
     return 0;
   }
 
-  // Boolean Habit
-
   if (habit.type === "boolean") {
     return log.completed ? 100 : 0;
   }
 
-  // Count / Duration Habit
-
-  if (habit.type === "count" || habit.type === "duration") {
+  if (
+    habit.type === "count" ||
+    habit.type === "numeric" ||
+    habit.type === "duration"
+  ) {
     if (!habit.target || habit.target <= 0) {
       return log.completed ? 100 : 0;
     }
@@ -80,18 +159,25 @@ const calculateLogCompletion = (habit, log) => {
     return Math.min(Math.round((value / habit.target) * 100), 100);
   }
 
+  if (habit.type === "rating") {
+    const value = Number(log.value) || 0;
+
+    return Math.min(Math.round((value / 5) * 100), 100);
+  }
+
   return 0;
 };
 
-// DAILY ANALYTICS
+export const calculateDailyAnalytics = async (userId, date) => {
+  const dateString = date || getTodayDateString();
 
-export const calculateDailyAnalytics = async (userId, date = new Date()) => {
-  const day = getStartOfDay(date);
-  const endOfDay = getEndOfDay(day);
+  if (!isValidDateString(dateString)) {
+    throw new Error("Invalid analytics date");
+  }
 
-  const dateString = getDateString(day);
+  const { year, month, day } = parseDateString(dateString);
 
-  // Get active habits
+  const endOfDay = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
 
   const habits = await Habit.find({
     userId,
@@ -101,17 +187,10 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     },
   }).lean();
 
-  // Get logs for this day
-
   const logs = await HabitLog.find({
     userId,
-    date: {
-      $gte: day,
-      $lte: endOfDay,
-    },
+    date: dateString,
   }).lean();
-
-  // Create log lookup map
 
   const logMap = new Map();
 
@@ -119,12 +198,8 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     logMap.set(log.habitId.toString(), log);
   });
 
-  // Overall statistics
-
   let totalExpected = 0;
   let totalCompleted = 0;
-
-  // Category statistics
 
   const categoryStats = {
     spiritual: {
@@ -152,46 +227,24 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
     },
   };
 
-  //Individual habit statistics
-
   const habitStats = [];
 
-  // Process habits
-
   for (const habit of habits) {
-    //Check whether habit is scheduled today
-
-    if (!isHabitScheduled(habit, day)) {
+    if (!isHabitScheduled(habit, dateString)) {
       continue;
     }
 
-    //Find today's log
-
     const log = logMap.get(habit._id.toString());
-
-    // Calculate completion
 
     const completion = calculateLogCompletion(habit, log);
 
     const completed = completion >= 100;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Overall
-    |--------------------------------------------------------------------------
-    */
 
     totalExpected += 1;
 
     if (completed) {
       totalCompleted += 1;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Category
-    |--------------------------------------------------------------------------
-    */
 
     const category = habit.category?.toLowerCase();
 
@@ -202,40 +255,20 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
         categoryStats[category].completed += 1;
       }
     }
-    /*
-    |--------------------------------------------------------------------------
-    | Individual habit data
-    |--------------------------------------------------------------------------
-    */
 
     habitStats.push({
       habitId: habit._id,
-
       name: habit.habitName,
-
       category: habit.category,
-
       type: habit.type,
-
       target: habit.target,
-
       unit: habit.unit,
-
       frequency: habit.frequency,
-
       completion,
-
       completed,
-
       value: log?.value ?? 0,
     });
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Category percentages
-  |--------------------------------------------------------------------------
-  */
 
   CATEGORIES.forEach((category) => {
     const stats = categoryStats[category];
@@ -246,22 +279,10 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
         : Math.round((stats.completed / stats.expected) * 100);
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Overall percentage
-  |--------------------------------------------------------------------------
-  */
-
   const overall =
     totalExpected === 0
       ? 0
       : Math.round((totalCompleted / totalExpected) * 100);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Return
-  |--------------------------------------------------------------------------
-  */
 
   return {
     date: dateString,
@@ -278,47 +299,27 @@ export const calculateDailyAnalytics = async (userId, date = new Date()) => {
   };
 };
 
-/*
-|--------------------------------------------------------------------------
-| RANGE ANALYTICS
-|--------------------------------------------------------------------------
-*/
-
 export const calculateRangeAnalytics = async (userId, startDate, endDate) => {
-  const start = getStartOfDay(startDate);
-  const end = getEndOfDay(endDate);
+  const start = startDate;
+  const end = endDate;
+
+  if (!isValidDateString(start) || !isValidDateString(end)) {
+    throw new Error("Invalid analytics range");
+  }
 
   const dailyAnalytics = [];
 
-  const currentDate = new Date(start);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Calculate every day
-  |--------------------------------------------------------------------------
-  */
+  let currentDate = start;
 
   while (currentDate <= end) {
-    const daily = await calculateDailyAnalytics(userId, new Date(currentDate));
+    const daily = await calculateDailyAnalytics(userId, currentDate);
 
     dailyAnalytics.push(daily);
 
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate = addDays(currentDate, 1);
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Days containing at least one scheduled habit
-  |--------------------------------------------------------------------------
-  */
-
   const daysWithHabits = dailyAnalytics.filter((day) => day.expected > 0);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Overall range percentage
-  |--------------------------------------------------------------------------
-  */
 
   const overall =
     daysWithHabits.length === 0
@@ -327,12 +328,6 @@ export const calculateRangeAnalytics = async (userId, startDate, endDate) => {
           daysWithHabits.reduce((sum, day) => sum + day.overall, 0) /
             daysWithHabits.length,
         );
-
-  /*
-  |--------------------------------------------------------------------------
-  | Category percentages
-  |--------------------------------------------------------------------------
-  */
 
   const categories = {};
 
@@ -352,16 +347,9 @@ export const calculateRangeAnalytics = async (userId, startDate, endDate) => {
           );
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Return
-  |--------------------------------------------------------------------------
-  */
-
   return {
-    startDate: getDateString(start),
-
-    endDate: getDateString(end),
+    startDate: start,
+    endDate: end,
 
     overall,
 
@@ -371,300 +359,248 @@ export const calculateRangeAnalytics = async (userId, startDate, endDate) => {
   };
 };
 
-/*
-|--------------------------------------------------------------------------
-| WEEKLY ANALYTICS
-|--------------------------------------------------------------------------
-|
-| Monday → Sunday
-|
-|--------------------------------------------------------------------------
-*/
+export const calculateWeeklyAnalytics = async (userId, date) => {
+  const currentDate = date || getTodayDateString();
 
-export const calculateWeeklyAnalytics = async (userId, date = new Date()) => {
-  const current = getStartOfDay(date);
+  if (!isValidDateString(currentDate)) {
+    throw new Error("Invalid weekly analytics date");
+  }
 
-  const dayOfWeek = current.getDay();
-
-  /*
-  |--------------------------------------------------------------------------
-  | Find Monday
-  |--------------------------------------------------------------------------
-  */
+  const dayOfWeek = getDayOfWeek(currentDate);
 
   const difference = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
 
-  const monday = new Date(current);
+  const monday = addDays(currentDate, difference);
 
-  monday.setDate(monday.getDate() + difference);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Find Sunday
-  |--------------------------------------------------------------------------
-  */
-
-  const sunday = new Date(monday);
-
-  sunday.setDate(sunday.getDate() + 6);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Calculate range
-  |--------------------------------------------------------------------------
-  */
+  const sunday = addDays(monday, 6);
 
   return calculateRangeAnalytics(userId, monday, sunday);
 };
 
-/*
-|--------------------------------------------------------------------------
-| MONTHLY ANALYTICS
-|--------------------------------------------------------------------------
-*/
+export const calculateMonthlyAnalytics = async (userId, date) => {
+  const currentDate = date || getTodayDateString();
 
-export const calculateMonthlyAnalytics = async (userId, date = new Date()) => {
-  const year = date.getFullYear();
+  if (!isValidDateString(currentDate)) {
+    throw new Error("Invalid monthly analytics date");
+  }
 
-  const month = date.getMonth();
+  const year = getYear(currentDate);
 
-  /*
-  |--------------------------------------------------------------------------
-  | First day of month
-  |--------------------------------------------------------------------------
-  */
+  const month = getMonthNumber(currentDate);
 
-  const firstDay = new Date(year, month, 1);
+  const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Last day of month
-  |--------------------------------------------------------------------------
-  */
+  const lastDayDate = new Date(Date.UTC(year, month, 0));
 
-  const lastDay = new Date(year, month + 1, 0);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Calculate range
-  |--------------------------------------------------------------------------
-  */
+  const lastDay = dateToString(lastDayDate);
 
   return calculateRangeAnalytics(userId, firstDay, lastDay);
 };
 
-//HABIT STREAK
 export const calculateHabitStreak = async (userId, habitId) => {
-  /*
-  |--------------------------------------------------------------------------
-  | Find habit
-  |--------------------------------------------------------------------------
-  */
-
   const habit = await Habit.findOne({
     _id: habitId,
     userId,
+    active: true,
   }).lean();
 
   if (!habit) {
     throw new Error("Habit not found");
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Get all logs
-  |--------------------------------------------------------------------------
-  */
-
   const logs = await HabitLog.find({
     userId,
     habitId,
+    completed: true,
   })
-    .sort({
-      date: -1,
-    })
+    .sort({ date: 1 })
     .lean();
-
-  /*
-  |--------------------------------------------------------------------------
-  | Store completed dates
-  |--------------------------------------------------------------------------
-  */
 
   const completedDates = new Set();
 
   logs.forEach((log) => {
-    if (log.completed) {
-      completedDates.add(getDateString(new Date(log.date)));
+    if (!log.date) return;
+
+    const logDate = new Date(log.date);
+
+    if (Number.isNaN(logDate.getTime())) {
+      return;
     }
+
+    const dateString = logDate.toISOString().split("T")[0];
+
+    completedDates.add(dateString);
   });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Current streak
-  |--------------------------------------------------------------------------
-  */
+  const now = new Date();
+
+  const today = now.toISOString().split("T")[0];
+
+  const createdDate = new Date(habit.createdAt);
+
+  const createdDateString = createdDate.toISOString().split("T")[0];
+
+  const parseDate = (dateString) => {
+    return new Date(`${dateString}T00:00:00.000Z`);
+  };
+
+  const addDays = (dateString, amount) => {
+    const date = parseDate(dateString);
+
+    date.setUTCDate(date.getUTCDate() + amount);
+
+    return date.toISOString().split("T")[0];
+  };
+
+  const getDayOfWeek = (dateString) => {
+    return parseDate(dateString).getUTCDay();
+  };
+
+  const getDayOfMonth = (dateString) => {
+    return parseDate(dateString).getUTCDate();
+  };
+
+  const getYear = (dateString) => {
+    return parseDate(dateString).getUTCFullYear();
+  };
+
+  const getMonth = (dateString) => {
+    return parseDate(dateString).getUTCMonth();
+  };
+
+  const isScheduled = (dateString) => {
+    if (dateString < createdDateString) {
+      return false;
+    }
+
+    if (habit.frequency === "daily") {
+      return true;
+    }
+
+    if (habit.frequency === "weekly") {
+      return getDayOfWeek(dateString) === getDayOfWeek(createdDateString);
+    }
+
+    if (habit.frequency === "monthly") {
+      return getDayOfMonth(dateString) === getDayOfMonth(createdDateString);
+    }
+
+    if (habit.frequency === "custom") {
+      const dayNames = [
+        "sunday",
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+      ];
+
+      const currentDay = dayNames[getDayOfWeek(dateString)];
+
+      return Boolean(habit.scheduledDays?.includes(currentDay));
+    }
+
+    return false;
+  };
 
   let currentStreak = 0;
 
-  const today = getStartOfDay(new Date());
+  let checkDate = today;
 
-  let checkDate = new Date(today);
-
-  /*
-  |--------------------------------------------------------------------------
-  | If today is scheduled but not completed,
-  | start checking from yesterday.
-  |--------------------------------------------------------------------------
-  */
-
-  const todayScheduled = isHabitScheduled(habit, today);
-
-  const todayString = getDateString(today);
-
-  if (todayScheduled && !completedDates.has(todayString)) {
-    checkDate.setDate(checkDate.getDate() - 1);
+  if (isScheduled(today) && !completedDates.has(today)) {
+    checkDate = addDays(checkDate, -1);
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Find consecutive scheduled completions
-  |--------------------------------------------------------------------------
-  */
-
   while (true) {
-    /*
-    |--------------------------------------------------------------------------
-    | Don't count days before habit existed
-    |--------------------------------------------------------------------------
-    */
-
-    const habitCreatedDate = getStartOfDay(habit.createdAt);
-
-    if (checkDate < habitCreatedDate) {
+    if (checkDate < createdDateString) {
       break;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Skip days where habit wasn't scheduled
-    |--------------------------------------------------------------------------
-    */
-
-    if (!isHabitScheduled(habit, checkDate)) {
-      checkDate.setDate(checkDate.getDate() - 1);
+    if (!isScheduled(checkDate)) {
+      checkDate = addDays(checkDate, -1);
 
       continue;
     }
 
-    const dateString = getDateString(checkDate);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Stop when scheduled day wasn't completed
-    |--------------------------------------------------------------------------
-    */
-
-    if (!completedDates.has(dateString)) {
+    if (!completedDates.has(checkDate)) {
       break;
     }
 
-    currentStreak++;
+    currentStreak += 1;
 
-    checkDate.setDate(checkDate.getDate() - 1);
+    checkDate = addDays(checkDate, -1);
   }
-
-  /*
-  |--------------------------------------------------------------------------
-  | Longest streak
-  |--------------------------------------------------------------------------
-  */
 
   const sortedDates = [...completedDates].sort();
 
   let longestStreak = 0;
-
   let runningStreak = 0;
-
   let previousDate = null;
 
-  for (const dateString of sortedDates) {
-    const currentDate = new Date(`${dateString}T00:00:00`);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Ignore dates before habit creation
-    |--------------------------------------------------------------------------
-    */
-
-    const habitCreatedDate = getStartOfDay(habit.createdAt);
-
-    if (currentDate < habitCreatedDate) {
+  for (const currentDate of sortedDates) {
+    if (currentDate < createdDateString) {
       continue;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | First completed date
-    |--------------------------------------------------------------------------
-    */
 
     if (!previousDate) {
       runningStreak = 1;
     } else {
-      /*
-      |--------------------------------------------------------------------------
-      | Difference in days
-      |--------------------------------------------------------------------------
-      */
+      if (habit.frequency === "daily") {
+        const difference = Math.round(
+          (parseDate(currentDate) - parseDate(previousDate)) /
+            (1000 * 60 * 60 * 24),
+        );
 
-      const difference = Math.round(
-        (currentDate - previousDate) / (1000 * 60 * 60 * 24),
-      );
+        if (difference === 1) {
+          runningStreak += 1;
+        } else {
+          runningStreak = 1;
+        }
+      } else if (habit.frequency === "weekly") {
+        const difference = Math.round(
+          (parseDate(currentDate) - parseDate(previousDate)) /
+            (1000 * 60 * 60 * 24),
+        );
 
-      /*
-      |--------------------------------------------------------------------------
-      | Daily habit
-      |--------------------------------------------------------------------------
-      */
-
-      if (habit.frequency === "daily" && difference === 1) {
-        runningStreak++;
-      } else if (habit.frequency === "weekly" && difference === 7) {
-        /*
-      |--------------------------------------------------------------------------
-      | Weekly habit
-      |--------------------------------------------------------------------------
-      */
-        runningStreak++;
+        if (difference === 7) {
+          runningStreak += 1;
+        } else {
+          runningStreak = 1;
+        }
       } else if (habit.frequency === "monthly") {
-        /*
-      |--------------------------------------------------------------------------
-      | Monthly habit
-      |--------------------------------------------------------------------------
-      */
-        const previousMonth = previousDate.getMonth();
-
-        const previousYear = previousDate.getFullYear();
-
-        const currentMonth = currentDate.getMonth();
-
-        const currentYear = currentDate.getFullYear();
-
         const monthDifference =
-          (currentYear - previousYear) * 12 + (currentMonth - previousMonth);
+          (getYear(currentDate) - getYear(previousDate)) * 12 +
+          (getMonth(currentDate) - getMonth(previousDate));
 
         if (monthDifference === 1) {
-          runningStreak++;
+          runningStreak += 1;
+        } else {
+          runningStreak = 1;
+        }
+      } else if (habit.frequency === "custom") {
+        let nextScheduledDate = addDays(previousDate, 1);
+
+        let foundNext = false;
+
+        for (let i = 0; i < 31; i++) {
+          if (isScheduled(nextScheduledDate)) {
+            if (nextScheduledDate === currentDate) {
+              foundNext = true;
+            }
+
+            break;
+          }
+
+          nextScheduledDate = addDays(nextScheduledDate, 1);
+        }
+
+        if (foundNext) {
+          runningStreak += 1;
         } else {
           runningStreak = 1;
         }
       } else {
-        /*
-      |--------------------------------------------------------------------------
-      | Invalid consecutive date
-      |--------------------------------------------------------------------------
-      */
         runningStreak = 1;
       }
     }
@@ -674,35 +610,26 @@ export const calculateHabitStreak = async (userId, habitId) => {
     previousDate = currentDate;
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | Return streak
-  |--------------------------------------------------------------------------
-  */
-
   return {
     habitId,
-
     currentStreak,
-
     longestStreak,
   };
 };
 
 export const calculateCalendarAnalytics = async (userId, year, month) => {
-  // month is 1-12
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
+  const firstDay = `${year}-${String(month).padStart(2, "0")}-01`;
+
+  const lastDayDate = new Date(Date.UTC(year, month, 0));
+
+  const lastDay = dateToString(lastDayDate);
 
   const calendar = [];
 
-  const currentDate = new Date(firstDay);
+  let currentDate = firstDay;
 
   while (currentDate <= lastDay) {
-    const dailyAnalytics = await calculateDailyAnalytics(
-      userId,
-      new Date(currentDate),
-    );
+    const dailyAnalytics = await calculateDailyAnalytics(userId, currentDate);
 
     let status = "none";
 
@@ -718,19 +645,25 @@ export const calculateCalendarAnalytics = async (userId, year, month) => {
 
     calendar.push({
       date: dailyAnalytics.date,
+
       status,
+
       completion: dailyAnalytics.overall,
+
       completed: dailyAnalytics.completed,
+
       expected: dailyAnalytics.expected,
     });
 
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate = addDays(currentDate, 1);
   }
 
   return {
     year,
     month,
-    daysInMonth: lastDay.getDate(),
+
+    daysInMonth: lastDayDate.getUTCDate(),
+
     calendar,
   };
 };

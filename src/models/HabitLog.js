@@ -13,8 +13,9 @@ const habitLogSchema = new Schema(
       required: true,
     },
     date: {
-      type: Date,
+      type: String,
       required: true,
+      match: /^\d{4}-\d{2}-\d{2}$/,
     },
     value: {
       type: Number,

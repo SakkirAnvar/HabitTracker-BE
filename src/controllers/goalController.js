@@ -88,104 +88,143 @@ export const getGoal = async (req, res) => {
 
 //getAllGoal
 export const getAllGoal = async (req, res) => {
-  const userId = req.user._id;
+  try {
+    const userId = req.user._id;
 
-  const goals = await Goal.find({
-    userId,
-  })
-    .populate("habitIds")
-    .sort({ createdAt: -1 });
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 6, 1), 50);
 
-  res.status(200).json({
-    status: true,
-    message: "Goals retrieved successfully",
-    data: goals,
-  });
+    const skip = (page - 1) * limit;
+
+    const [goals, totalGoals] = await Promise.all([
+      Goal.find({ userId })
+        .populate("habitIds")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      Goal.countDocuments({ userId }),
+    ]);
+
+    const goalsWithProgress = await Promise.all(
+      goals.map(async (goal) => {
+        const progress = await calculateGoalProgress(userId, goal._id);
+
+        return {
+          ...goal,
+          currentProgress: progress.currentProgress,
+          progressPercentage: progress.progressPercentage,
+          completedHabitLogs: progress.completedHabitLogs,
+        };
+      }),
+    );
+
+    const totalPages = Math.ceil(totalGoals / limit);
+
+    res.status(200).json({
+      status: true,
+      message: "Goals retrieved successfully",
+      data: goalsWithProgress,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalGoals,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
+  } catch (error) {
+    console.error("Get all goals error:", error);
+
+    res.status(500).json({
+      status: false,
+      message: "Failed to retrieve goals",
+      error: error.message,
+    });
+  }
 };
 
 //updateGoal
 export const updateGoal = async (req, res) => {
-  const userId = req.user._id;
-  const goalId = req.params.id;
+  try {
+    const userId = req.user._id;
+    const goalId = req.params.id;
+    if (!mongoose.isValidObjectId(goalId)) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid goal ID",
+      });
+    }
 
-  if (!mongoose.isValidObjectId(goalId)) {
-    return res.status(400).json({
+    validateGoal(req, true);
+
+    const goal = await Goal.findOne({
+      _id: goalId,
+      userId,
+    });
+
+    if (!goal) {
+      return res.status(404).json({
+        status: false,
+        message: "Goal not found",
+      });
+    }
+
+    const {
+      title,
+      description,
+      target,
+      currentProgress,
+      unit,
+      startDate,
+      deadLine,
+    } = req.body;
+
+    if (title !== undefined) {
+      goal.title = title.trim();
+    }
+
+    if (description !== undefined) {
+      goal.description = description;
+    }
+
+    if (target !== undefined) {
+      goal.target = target;
+    }
+
+    if (currentProgress !== undefined) {
+      goal.currentProgress = currentProgress;
+    }
+
+    if (unit !== undefined) {
+      goal.unit = unit;
+    }
+
+    if (startDate !== undefined) {
+      goal.startDate = startDate;
+    }
+
+    if (deadLine !== undefined) {
+      goal.deadLine = deadLine;
+    }
+
+    const updatedGoal = await goal.save();
+
+    return res.status(200).json({
+      status: true,
+      message: "Goal updated successfully",
+      data: updatedGoal,
+    });
+  } catch (error) {
+    console.error("Update goal error:", error);
+
+    return res.status(500).json({
       status: false,
-      message: "Invalid goal ID",
+      message: error.message || "Failed to update goal",
     });
   }
-
-  validateGoal(req.body, true);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Find user's goal
-  |--------------------------------------------------------------------------
-  */
-
-  const goal = await Goal.findOne({
-    _id: goalId,
-    userId,
-  });
-
-  if (!goal) {
-    return res.status(404).json({
-      status: false,
-      message: "Goal not found",
-    });
-  }
-
-  const {
-    title,
-    description,
-    target,
-    currentProgress,
-    unit,
-    startDate,
-    deadLine,
-  } = req.body;
-
-  /*
-  |--------------------------------------------------------------------------
-  | Update only provided fields
-  |--------------------------------------------------------------------------
-  */
-
-  if (title !== undefined) {
-    goal.title = title.trim();
-  }
-
-  if (description !== undefined) {
-    goal.description = description;
-  }
-
-  if (target !== undefined) {
-    goal.target = target;
-  }
-
-  if (currentProgress !== undefined) {
-    goal.currentProgress = currentProgress;
-  }
-
-  if (unit !== undefined) {
-    goal.unit = unit;
-  }
-
-  if (startDate !== undefined) {
-    goal.startDate = startDate;
-  }
-
-  if (deadLine !== undefined) {
-    goal.deadLine = deadline;
-  }
-
-  const updatedGoal = await goal.save();
-
-  res.status(200).json({
-    status: true,
-    message: "Goal updated successfully",
-    data: updatedGoal,
-  });
 };
 
 //deleteGoal
